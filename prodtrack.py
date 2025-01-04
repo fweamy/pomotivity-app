@@ -1,23 +1,20 @@
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QVBoxLayout, QWidget, QPushButton
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ProdTrack")
 
-        self.button = QPushButton("Press")
-        self.button.setCheckable(True)
-        self.button.clicked.connect(self.button_clicked)
+        self.label = QLabel()
 
-        self.setCentralWidget(self.button)
+        self.input = QLineEdit()
+        self.input.textChanged.connect(self.label.setText)
 
-    def button_clicked(self):
-        print("Clicked. Disabling now.")
-        self.button.setEnabled(False)
+        self.setCentralWidget(self.input)
+        self.setCentralWidget(self.label)
 
-        self.setWindowTitle("New Window")
-
+        
 
 app = QApplication([])
 
