@@ -1,28 +1,28 @@
 import sys
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QTextEdit, QLineEdit, QVBoxLayout, QWidget, QPushButton
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QLabel, QTextEdit, QLineEdit, QVBoxLayout, QWidget, QPushButton
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ProdTrack")
 
-        self.label = QLabel("Click in this window")
+        self.label = QLabel("Hi")
         self.setCentralWidget(self.label)
 
-    def mouseMoveEvent (self, e):
-        self.label.setText("mouseMoveEvent")
-    
-    def mousePressEvent(self, e):
-        self.label.setText("mousePressEvent")
+    def contextMenuEvent(self, e):
+        context = QMenu(self)
+        act1 = QAction("test 1", self)
+        context.addAction(act1)
+        act1.triggered.connect(self.hello)
+        context.addAction(QAction("test 2", self))
+        context.exec(e.globalPos())
 
-    def mouseReleaseEvent(self, e):
-        self.label.setText("mouseReleaseEvent")
+    def hello(self):
+        self.label.setText("Action1 clicked")
 
-    def mouseDoubleClickEvent(self, e):
-        self.label.setText("mouseDoubleClickEvent")
-        
 
 app = QApplication(sys.argv)
 
