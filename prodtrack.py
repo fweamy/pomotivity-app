@@ -1,27 +1,33 @@
 import sys
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QLabel, QTextEdit, QLineEdit, QVBoxLayout, QWidget, QPushButton
+from PyQt6.QtGui import QAction, QColor, QPalette
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QLabel, QTextEdit, QLineEdit, QVBoxLayout, QHBoxLayout, QWidget, QPushButton
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ProdTrack")
 
-        self.label = QLabel("Hi")
-        self.setCentralWidget(self.label)
+        layout = QHBoxLayout()
+        layout.addWidget(Color("red"))        
+        layout.addWidget(Color("blue"))
+        layout.addWidget(Color("yellow"))
 
-    def contextMenuEvent(self, e):
-        context = QMenu(self)
-        act1 = QAction("test 1", self)
-        context.addAction(act1)
-        act1.triggered.connect(self.hello)
-        context.addAction(QAction("test 2", self))
-        context.exec(e.globalPos())
+        widget = QWidget()
+        widget.setLayout(layout)
+    
+        self.setCentralWidget(widget)
 
-    def hello(self):
-        self.label.setText("Action1 clicked")
+
+class Color(QWidget):
+    def __init__(self, color):
+        super().__init__()
+        self.setAutoFillBackground(True)
+
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(color))
+        self.setPalette(palette)
 
 
 app = QApplication(sys.argv)
