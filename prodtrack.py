@@ -5,32 +5,29 @@ from PyQt6.QtGui import QAction, QColor, QPalette
 from PyQt6.QtWidgets import *
 
 class MainWindow(QMainWindow):
+
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("My App")
 
-        layout1 = QVBoxLayout()
-        layout2 = QStackedLayout()
-        layout1.addLayout(layout2)
+        self.setWindowTitle("My Awesome App")
 
-        input = QLineEdit()
-        input.textChanged.connect(lambda text: self.setIndex(layout2, text))
+        label = QLabel("Hello!")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        layout1.addWidget(input)
-        layout2.addWidget(Color("red"))
-        layout2.addWidget(Color("green"))
-        layout2.addWidget(Color("blue"))
-        layout2.addWidget(Color("yellow"))
+        self.setCentralWidget(label)
 
-        widget = QWidget()
-        widget.setLayout(layout1)
-        self.setCentralWidget(widget)
+        toolbar = QToolBar("My main toolbar")
+        self.addToolBar(toolbar)
 
-    def setIndex(self, layout: QStackedLayout, text):
-        try:
-            layout.setCurrentIndex(int(text)) 
-        except ValueError:
-            pass
+        button_action = QAction("Your button", self)
+        button_action.setStatusTip("This is your button")
+        button_action.triggered.connect(self.onMyToolBarButtonClick)
+        toolbar.addAction(button_action)
+
+        self.setStatusBar(QStatusBar(self))
+
+    def onMyToolBarButtonClick(self, s):
+        print("click", s)
 
 
 class Color(QWidget):
