@@ -4,20 +4,22 @@ import os
 import re
 import sys
 import time
+import sqlite3
 
 
 def main():
     if len(sys.argv) != 2:
         sys.exit("Usage: python project.py file.csv")
-    match = re.search(r"(\w+\.csv)", sys.argv[1])
+    match = re.search(r"(\w+\.db)", sys.argv[1])
     if not match:
-        sys.exit("Invalid filename")
-    filename = match.group(0)
+        sys.exit("Invalid database")
+    dbname = match.group(0)
 
     # READING (r) + not truncating/creating file if not exist (a/a+ only)
-    file = open(filename, "a+")
+    connection = sqlite3.connect(dbname)
+    cursor = connection.cursor()
 
-    user_list = TodoList(file)
+    user_list = TodoList(cursor)
     user_timer = PomoTimer()
 
     # Main Menu
@@ -81,12 +83,21 @@ def main():
 # CLASSES
 # =============================
 class TodoList():
-    def __init__(self, csvfile):
-        self.file = csvfile
-        self.file.seek(0)
-        self.tdlist = list(csv.DictReader(self.file))
-        self.file.truncate(0)
-        self.writer = csv.DictWriter(self.file, fieldnames=["name", "status"])
+    def __init__(self, db_cursor):
+        self.cur = db_cursor
+        self.tdlist = self.cur.execute(
+            """SELECT name FROM sqlite_master WHERE type='table' AND name='todolist';"""
+        ).fetchall()
+        if self.tdlist == []:
+            self.cur.execute(
+                """CREATE TABLE todolist
+                (
+                    task_name VARCHAR(255),
+                    task_status int
+                );"""
+            )
+        else:
+            print('Table found!')
 
     def __str__(self):
         printlist = ""
