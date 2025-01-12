@@ -17,9 +17,8 @@ def main():
 
     # READING (r) + not truncating/creating file if not exist (a/a+ only)
     connection = sqlite3.connect(dbname)
-    cursor = connection.cursor()
 
-    user_list = TodoList(cursor)
+    user_list = TodoList(connection)
     user_timer = PomoTimer()
 
     # Main Menu
@@ -76,71 +75,94 @@ def main():
 
         elif user == "b":
             user_list.save_list()
-            file.close()
             sys.exit("Thank you for using the program.")
 
 
 # CLASSES
 # =============================
 class TodoList():
-    def __init__(self, db_cursor):
-        self.cur = db_cursor
-        self.tdlist = self.cur.execute(
-            """SELECT name FROM sqlite_master WHERE type='table' AND name='todolist';"""
+    def __init__(self, db_connection):
+        self.con = db_connection
+        self.cur = self.con.cursor()
+        self.check = self.cur.execute(
+            """
+            SELECT name 
+            FROM sqlite_master 
+            WHERE type='table' 
+            AND name='todolist';
+            """
         ).fetchall()
-        if self.tdlist == []:
+
+        if self.check == []:
             self.cur.execute(
                 """CREATE TABLE todolist
                 (
-                    task_name VARCHAR(255),
-                    task_status int
+                    ID INTEGER PRIMARY KEY,
+                    TaskName VARCHAR(255) NOT NULL,
+                    TaskStatus INT NOT NULL
                 );"""
             )
         else:
             print('Table found!')
 
     def __str__(self):
-        printlist = ""
-        for i, task in enumerate(self.tdlist):
-            name = task["name"]
-            match task["status"]:
-                case '0':
-                    status = "☐"
-                case '1':
-                    status = "☒"
-                case _:
-                    status = "???"
-            printlist += f"{i + 1}. {status} {name}\n"
-        return printlist
+        self.tdlist = self.cur.execute(
+            """
+            SELECT * 
+            FROM todolist;
+            """
+        ).fetchall()
+
+        return str(self.tdlist)
 
     def show_list(self):
         input(f"{self}\nPress ENTER to continue")
 
     def add_task(self, taskname):
-        task = {"name": taskname, "status": '0'}
-        self.tdlist.append(task)
-        self.save_list()
+        command = f"""
+                    INSERT INTO todolist (TaskName, TaskStatus)
+                    VALUES ('{taskname}', 0); 
+                    """
+        self.cur.execute(command)
+
+        self.con.commit()
 
     def remove_task(self, tasknum):
-        index = tasknum - 1
-        self.tdlist.pop(index)
+        command = f"""
+                    DELETE FROM todolist
+                    WHERE ID = {tasknum} 
+                    """
+        self.cur.execute(command)
+        
+        self.con.commit()
+        
 
     def update_task(self, tasknum):
-        index = tasknum - 1
-        status = self.tdlist[index]["status"]
-        if status == '0':
-            self.tdlist[index]["status"] = '1'
-        else:
-            self.tdlist[index]["status"] = '0'
+        command = f"""
+                    SELECT TaskStatus FROM todolist
+                    WHERE ID = {tasknum} 
+                    """
+        self.cur.execute(command)
+        status = self.cur.fetchone() 
+        # Potential bug: status is a list/status is not an int
+
+        status = 1 if status == 0 else 1
+        command = f"""
+                    UPDATE todolist
+                    SET TaskStatus = {status}
+                    WHERE ID = {tasknum}
+                    """
+        
+        self.cur.execute(command)
+
+        self.con.commit()
 
     def get_task(self, tasknum):
-        index = int(tasknum) - 1
-        return self.tdlist[index]["name"]
+        pass
 
     def save_list(self):
-        self.writer.writeheader()
-        for task in self.tdlist:
-            self.writer.writerow(task)
+        self.con.commit()
+        self.con.close()
 
 
 class Duration(object):
