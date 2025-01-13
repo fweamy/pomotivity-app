@@ -83,6 +83,7 @@ def main():
 class TodoList():
     def __init__(self, db_connection):
         self.con = db_connection
+        self.con.row_factory = sqlite3.Row
         self.cur = self.con.cursor()
         self.check = self.cur.execute(
             """
@@ -112,8 +113,10 @@ class TodoList():
             FROM todolist;
             """
         ).fetchall()
-
+        
+        self.tdlist = [{k: task[k] for k in task.keys()} for task in self.tdlist]
         return str(self.tdlist)
+
 
     def show_list(self):
         input(f"{self}\nPress ENTER to continue")
