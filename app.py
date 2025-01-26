@@ -4,31 +4,33 @@ import os
 import re
 import sys
 import time
+import sqlite3
 
 
 def main():
     if len(sys.argv) != 2:
-        sys.exit("Usage: python project.py file.csv")
-    match = re.search(r"(\w+\.csv)", sys.argv[1])
+        sys.exit("Usage: python project.py file.db")
+    match = re.search(r"(\w+\.db)", sys.argv[1])
     if not match:
-        sys.exit("Invalid filename")
-    filename = match.group(0)
+        sys.exit("Invalid database")
+    dbname = match.group(0)
 
-    # READING (r) + not truncating/creating file if not exist (a/a+ only)
-    file = open(filename, "a+")
+    # Connect to SQL database
+    connection = sqlite3.connect(dbname)
 
-    user_list = TodoList(file)
+    # Initialize To-do List and Pomodoro Timer
+    user_list = TodoList(connection)
     user_timer = PomoTimer()
 
     # Main Menu
     while True:
-        os.system("clear")
+        os.system("cls")
         user = input(menu())
 
         # To-do List Menu
         if user == "1":
             while True:
-                os.system("clear")
+                os.system("cls")
 
                 user = input(menu_td())
                 match user:
@@ -49,13 +51,13 @@ def main():
                         pass
 
                 if user in ["1", "2", "3", "4"]:
-                    os.system("clear")
+                    os.system("cls")
                     user_list.show_list()
 
         # Pomodoro Timer Menu
         elif user == "2":
             while True:
-                os.system("clear")
+                os.system("cls")
 
                 user = input(menu_pomo())
                 match user:
@@ -74,62 +76,117 @@ def main():
 
         elif user == "b":
             user_list.save_list()
-            file.close()
             sys.exit("Thank you for using the program.")
 
 
 # CLASSES
 # =============================
 class TodoList():
-    def __init__(self, csvfile):
-        self.file = csvfile
-        self.file.seek(0)
-        self.tdlist = list(csv.DictReader(self.file))
-        self.file.truncate(0)
-        self.writer = csv.DictWriter(self.file, fieldnames=["name", "status"])
+    def __init__(self, db_connection: sqlite3.Connection):
+        self.con = db_connection
+        self.con.row_factory = sqlite3.Row
+        self.cur = self.con.cursor()
+        self.check = self.cur.execute(
+            """
+            SELECT name 
+            FROM sqlite_master 
+            WHERE type='table' 
+            AND name='todolist';
+            """
+        ).fetchall()
+
+        if self.check == []:
+            self.cur.execute(
+                """CREATE TABLE todolist
+                (
+                    ID INTEGER PRIMARY KEY,
+                    TaskName VARCHAR(255) NOT NULL,
+                    TaskStatus INT NOT NULL
+                );"""
+            )
+        else:
+            print('Table found!')
 
     def __str__(self):
-        printlist = ""
-        for i, task in enumerate(self.tdlist):
-            name = task["name"]
-            match task["status"]:
-                case '0':
+        self.tdlist = self.cur.execute(
+            """
+            SELECT * 
+            FROM todolist;
+            """
+        ).fetchall()
+        
+        self.tdlist = [{k: task[k] for k in task.keys()} for task in self.tdlist]
+
+        print_list = ""
+        for task in self.tdlist:
+            id = task["ID"]
+            name = task["TaskName"]
+            match task["TaskStatus"]:
+                case 0:
                     status = "☐"
-                case '1':
+                case 1:
                     status = "☒"
                 case _:
                     status = "???"
-            printlist += f"{i + 1}. {status} {name}\n"
-        return printlist
+            print_list += f"{id}. {status} {name}\n"
+
+        return print_list
+
 
     def show_list(self):
         input(f"{self}\nPress ENTER to continue")
 
     def add_task(self, taskname):
-        task = {"name": taskname, "status": '0'}
-        self.tdlist.append(task)
-        self.save_list()
+        command = f"""
+                    INSERT INTO todolist (TaskName, TaskStatus)
+                    VALUES ('{taskname}', 0); 
+                    """
+        self.cur.execute(command)
+
+        self.con.commit()
 
     def remove_task(self, tasknum):
-        index = tasknum - 1
-        self.tdlist.pop(index)
+        command = f"""
+                    DELETE FROM todolist
+                    WHERE ID = {tasknum} 
+                    """
+        self.cur.execute(command)
+        
+        self.con.commit()
+        
 
     def update_task(self, tasknum):
-        index = tasknum - 1
-        status = self.tdlist[index]["status"]
-        if status == '0':
-            self.tdlist[index]["status"] = '1'
-        else:
-            self.tdlist[index]["status"] = '0'
+        command = f"""
+                    SELECT TaskStatus FROM todolist
+                    WHERE ID = {tasknum} 
+                    """
+        self.cur.execute(command)
+        status = self.cur.fetchone() 
+
+        status = 1 if status == 0 else 1
+
+        command = f"""
+                    UPDATE todolist
+                    SET TaskStatus = {status}
+                    WHERE ID = {tasknum}
+                    """
+        
+        self.cur.execute(command)
+
+        self.con.commit()
 
     def get_task(self, tasknum):
-        index = int(tasknum) - 1
-        return self.tdlist[index]["name"]
+        command = f"""
+                    SELECT * FROM todolist
+                    WHERE ID = {tasknum} 
+                    """
+        self.cur.execute(command)
+        name = self.cur.fetchone()["TaskName"]
+        return name
 
     def save_list(self):
-        self.writer.writeheader()
-        for task in self.tdlist:
-            self.writer.writerow(task)
+        self.con.commit()
+        self.con.close()
 
 
 class Duration(object):
@@ -157,19 +214,34 @@ class PomoTimer():
         self.current_task = task
 
     def pomodoro(self):
-        timer(timer_name="pomodoro", task_name=self.current_task, t=self.pomotime)
+        self.timer(timer_name="pomodoro", task_name=self.current_task, t=self.pomotime)
 
     def sbreak(self):
-        timer(timer_name="short break", task_name=self.current_task, t=self.sbreaktime)
+        self.timer(timer_name="short break", task_name=self.current_task, t=self.sbreaktime)
 
     def lbreak(self):
-        timer(timer_name="long break", task_name=self.current_task, t=self.lbreaktime)
+        self.timer(timer_name="long break", task_name=self.current_task, t=self.lbreaktime)
 
+    # Run cycle of pomodoro timers
     def cycle(self, pomo_till_break=2):
         for _ in range(pomo_till_break):
             self.pomodoro()
             self.sbreak()
         self.lbreak()
+    
+    # Run timer and display time by clearing shell
+    def timer(timer_name="", task_name="", t=1):
+        input(f"Press ENTER to start {timer_name}")
+        for s in countdown(t):
+            os.system("cls")
+            print(
+                f'''
+        {timer_name.upper()} - {task_name}
+        {s}
+                '''
+            )
+            time.sleep(1)
+
 
 
 # FUNCTIONS
@@ -177,7 +249,7 @@ class PomoTimer():
 def menu():
     return (
         '''
-        🌱 WELCOME TO BUDDY! 🌱
+        🌱 WELCOME TO POMOTIVITY APP! 🌱
         ============================
         Choose an option. Enter b to exit.
         1. To-do List
@@ -218,7 +290,7 @@ def menu_pomo():
         '''
     )
 
-
+# Yield the time in formatted string
 def countdown(min):
     SEC_PER_MIN = 60
     if min < 1:
@@ -226,19 +298,6 @@ def countdown(min):
     for i in reversed(range(min)):
         for j in reversed(range(SEC_PER_MIN)):
             yield f"{i:02d}: {j:02d}"
-
-
-def timer(timer_name="", task_name="", t=1):
-    input(f"Press ENTER to start {timer_name}")
-    for s in countdown(t):
-        os.system("clear")
-        print(
-            f'''
-    {timer_name.upper()} - {task_name}
-    {s}
-            '''
-        )
-        time.sleep(1)
 
 
 if __name__ == "__main__":
