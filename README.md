@@ -17,7 +17,7 @@ python project.py file.db
 
 After you inputted a valid command, the main menu will boot up:
 ```
-🌱 WELCOME TO BUDDY! 🌱
+🌱 WELCOME TO POMOTIVITY APP! 🌱
 ============================
 Choose an option. Enter b to exit.
 1. To-do List
