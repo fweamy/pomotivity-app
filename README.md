@@ -1,5 +1,4 @@
 # POMOTIVITY 🌱 - A PRODUCTIVITY APP
-2-in-1 productivity app
 #### Video Demo: [POMOTIVITY 🌱 - Productivity App](https://www.youtube.com/watch?v=UOkGrrFft9E)
 #### Description:
 Pomotivity is a 2-in-1 productivity app where you can manage tasks with a to-do list and stay focused with a Pomodoro timer.
